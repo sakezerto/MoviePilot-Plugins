@@ -30,8 +30,7 @@ def _parse_config(config):
     for value in raw.replace("，", ",").split(",") if isinstance(raw, str) else []:
         try:
             size = _positive_int(value.strip(), "分片档位")
-            if size <= 1024:
-                values.add(size)
+            values.add(size)
         except (ValueError, TypeError):
             continue
     values = sorted(values or {100, 256, 512, 1024})
@@ -47,7 +46,7 @@ class U115ChunkSizer(_PluginBase):
     plugin_name = "115上传分片调节"
     plugin_desc = "按文件大小、目标分片数和自定义档位调整 115 首选上传分片大小。"
     plugin_icon = "Moviepilot_A.png"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_author = "sakezerto"
     author_url = "https://github.com/sakezerto"
     plugin_config_prefix = "u115chunksizer_"
@@ -143,7 +142,7 @@ class U115ChunkSizer(_PluginBase):
                              "model": "steps_mb", "label": "分片档位", "suffix": "MiB",
                              "variant": "outlined", "density": "comfortable", "color": "primary",
                              "placeholder": "100,256,512,1024", "prepend-inner-icon": "mdi-layers-outline",
-                             "hint": "用逗号分隔 1～1024 的整数；支持中文逗号，自动排序、去重。",
+                             "hint": "填写正整数 MiB，插件不设上限；支持中英文逗号，自动排序、去重。",
                              "persistent-hint": True}}
                      ]},
                      {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [
@@ -155,13 +154,18 @@ class U115ChunkSizer(_PluginBase):
                      ]}
                  ]},
                  {"component": "div", "props": {"class": "text-caption text-medium-emphasis mt-4"},
-                  "text": "无有效档位时使用 100,256,512,1024；无效目标数回退为 96。超过最大档位时取最大值。"}
+                  "text": "可追加 2048、4096 等档位。无有效档位时使用默认值；无效目标数回退为 96。超过最大配置档位时取最大值。"}
              ]}]},
             {"component": "VAlert", "props": {
                 "type": "info", "variant": "tonal", "rounded": "lg", "class": "mb-4",
                 "title": "计算示例 · 不是当前配置预览",
                 "text": "档位为 100 / 256 / 512 / 1024 MiB 时：6 GiB ÷ 16 = 384 MiB，"
                         "向上选 512 MiB，约 12 片。目标分片数是参考值，不是固定片数。"}},
+            {"component": "VAlert", "props": {
+                "type": "warning", "variant": "tonal", "rounded": "lg", "class": "mb-4",
+                "title": "配置无上限，不代表服务端无上限",
+                "text": "OSS 官方单片上限为 5 GiB（5120 MiB）；超过服务端限制可能上传失败。"
+                        "115 实际限制以服务端为准，大分片会增加失败重传成本。"}},
             {"component": "VExpansionPanels", "props": {"variant": "accordion"}, "content": [
                 {"component": "VExpansionPanel", "content": [
                     {"component": "VExpansionPanelTitle", "text": "使用提示与兼容性"},
