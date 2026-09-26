@@ -46,8 +46,8 @@ class U115ChunkSizer(_PluginBase):
     """在插件生命周期内替换 115 分片选择方法，并在停止时恢复。"""
     plugin_name = "115上传分片调节"
     plugin_desc = "按文件大小、目标分片数和自定义档位调整 115 首选上传分片大小。"
-    plugin_icon = "mdi-database-arrow-up"
-    plugin_version = "1.0.0"
+    plugin_icon = "Moviepilot_A.png"
+    plugin_version = "1.0.1"
     plugin_author = "sakezerto"
     author_url = "https://github.com/sakezerto"
     plugin_config_prefix = "u115chunksizer_"
@@ -117,26 +117,76 @@ class U115ChunkSizer(_PluginBase):
                 inspect.getattr_static(storage, _METHOD, None) is self._replacement)
 
     def get_form(self):
-        """返回原生 Vuetify 配置表单及默认配置。"""
+        """返回分区卡片式配置页，使用主题配色并适配窄屏。"""
         return [{"component": "VForm", "content": [
-            {"component": "VSwitch", "props": {"model": "enabled", "label": "启用插件"}},
-            {"component": "VTextField", "props": {
-                "model": "steps_mb", "label": "分片档位（MiB）",
-                "hint": "1～1024 的整数，中英文逗号分隔；过滤非法值、去重排序，全无效时回退默认档位", "persistent-hint": True}},
-            {"component": "VTextField", "props": {
-                "model": "target_parts", "label": "目标分片数", "type": "number", "min": 1}},
-            {"component": "VAlert", "props": {"type": "warning", "variant": "tonal"},
-             "text": "取不小于 文件大小÷目标分片数 的最小档位，超过最大档位时取最大值。"
-                     "1 GiB 默认取 100 MiB。只影响后续计算分片的新上传，不会重新切分已有分片。"
-                     "这是针对当前 115 实现的运行时补丁；升级后类名或私有方法变化时需适配。"
-                     "单片越大、分片越少，但失败重传成本越高；最终大小可能由 OSS SDK 调整。"}
+            {"component": "VCard", "props": {
+                "variant": "tonal", "color": "primary", "rounded": "lg", "class": "mb-4"},
+             "content": [{"component": "VCardText", "content": [
+                 {"component": "div", "props": {"class": "text-h6 font-weight-bold mb-1"},
+                  "text": "115 上传分片"},
+                 {"component": "div", "props": {"class": "text-body-2 mb-3"},
+                  "text": "设置分片档位，让不同大小的文件自动选择合适的上传分片。"},
+                 {"component": "VSwitch", "props": {
+                     "model": "enabled", "label": "启用自定义分片", "color": "primary",
+                     "inset": True, "hide-details": True, "class": "mt-0"}}
+             ]}]},
+            {"component": "VCard", "props": {
+                "variant": "outlined", "rounded": "lg", "class": "mb-4"},
+             "content": [{"component": "VCardText", "content": [
+                 {"component": "div", "props": {"class": "text-subtitle-1 font-weight-bold mb-1"},
+                  "text": "分片策略"},
+                 {"component": "div", "props": {"class": "text-body-2 text-medium-emphasis mb-5"},
+                  "text": "按“文件大小 ÷ 目标分片数”计算，再向上匹配一个档位。"},
+                 {"component": "VRow", "content": [
+                     {"component": "VCol", "props": {"cols": 12, "md": 8}, "content": [
+                         {"component": "VTextField", "props": {
+                             "model": "steps_mb", "label": "分片档位", "suffix": "MiB",
+                             "variant": "outlined", "density": "comfortable", "color": "primary",
+                             "placeholder": "100,256,512,1024", "prepend-inner-icon": "mdi-layers-outline",
+                             "hint": "用逗号分隔 1～1024 的整数；支持中文逗号，自动排序、去重。",
+                             "persistent-hint": True}}
+                     ]},
+                     {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [
+                         {"component": "VTextField", "props": {
+                             "model": "target_parts", "label": "目标分片数", "suffix": "片",
+                             "type": "number", "min": 1, "step": 1, "variant": "outlined",
+                             "density": "comfortable", "color": "primary",
+                             "hint": "默认 96；数值越小，通常分片越大。", "persistent-hint": True}}
+                     ]}
+                 ]},
+                 {"component": "div", "props": {"class": "text-caption text-medium-emphasis mt-4"},
+                  "text": "无有效档位时使用 100,256,512,1024；无效目标数回退为 96。超过最大档位时取最大值。"}
+             ]}]},
+            {"component": "VAlert", "props": {
+                "type": "info", "variant": "tonal", "rounded": "lg", "class": "mb-4",
+                "title": "计算示例 · 不是当前配置预览",
+                "text": "档位为 100 / 256 / 512 / 1024 MiB 时：6 GiB ÷ 16 = 384 MiB，"
+                        "向上选 512 MiB，约 12 片。目标分片数是参考值，不是固定片数。"}},
+            {"component": "VExpansionPanels", "props": {"variant": "accordion"}, "content": [
+                {"component": "VExpansionPanel", "content": [
+                    {"component": "VExpansionPanelTitle", "text": "使用提示与兼容性"},
+                    {"component": "VExpansionPanelText", "content": [
+                        {"component": "div", "props": {"class": "text-body-2 mb-2"},
+                         "text": "保存后影响后续计算分片的上传，已经确定的分片不会重新切分；停用后恢复原始策略。"},
+                        {"component": "div", "props": {"class": "text-body-2 mb-2"},
+                         "text": "单片越大，分片数量越少，但失败时的重传成本也更高。OSS SDK 可能进一步调整实际大小。"},
+                        {"component": "div", "props": {"class": "text-body-2 text-medium-emphasis"},
+                         "text": "插件使用运行时补丁。MoviePilot 升级后如 115 类名或私有方法发生变化，需要适配。"}
+                    ]}
+                ]}
+            ]}
         ]}], {"enabled": True, "steps_mb": "100,256,512,1024", "target_parts": 96}
 
     def get_page(self):
         """显示补丁状态及兼容性错误，便于本地安装后排查。"""
         error = getattr(self, "_error", "")
-        return [{"component": "VAlert", "props": {"type": "error" if error else "info"},
-                 "text": error or ("补丁已生效" if self.get_state() else "补丁未启用")}]
+        active = self.get_state()
+        return [{"component": "VAlert", "props": {
+            "type": "error" if error else ("success" if active else "info"),
+            "variant": "tonal", "rounded": "lg",
+            "title": "需要检查兼容性" if error else ("自定义分片已生效" if active else "自定义分片未启用"),
+            "text": error or ("后续计算分片的 115 上传将使用已保存的分片策略。" if active
+                              else "可在插件配置中启用，并设置分片档位与目标分片数。")}}]
 
     def get_api(self):
         """本插件不注册 API。"""
