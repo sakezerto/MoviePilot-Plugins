@@ -1,0 +1,16 @@
+{
+  "U115ChunkSizer": {
+    "name": "115上传分片调节",
+    "description": "按目标分片数和自定义 MiB 档位调整 115 首选上传分片大小。",
+    "version": "1.0.0",
+    "labels": "存储",
+    "icon": "mdi-database-arrow-up",
+    "author": "sakezerto",
+    "level": 1,
+    "system_version": ">=2.0.0,<3",
+    "v3": false,
+    "history": {
+      "v1.0.0": "支持自定义档位、配置校验、停用恢复与热重载。"
+    }
+  }
+}
